@@ -1,4 +1,6 @@
-const port = 4000;
+require('dotenv').config();
+
+const port = process.env.PORT ||4000;
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -12,7 +14,7 @@ app.use(cors());
 
 // Database connection with MongoDB
 // Removed the deprecated options
-mongoose.connect("mongodb+srv://kapil:root@cluster0.qqezztg.mongodb.net/e-commerce")
+mongoose.connect("process.env.MONGODB_URI")
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Failed to connect to MongoDB', err));
 
@@ -190,7 +192,9 @@ app.post('/signup', async (req, res) => {
       }
     };
 
-    const token = jwt.sign(data, 'secret_ecom');
+    const jwtSecret = process.env.JWT_SECRET;
+
+    const token = jwt.sign(data,  jwtSecre);
     res.json({ success: true, token });
   } catch (error) {
     console.error('Error during user registration:', error);
