@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const port = process.env.PORT ||4000;
 const express = require("express");
 const app = express();
@@ -14,7 +13,7 @@ app.use(cors());
 
 // Database connection with MongoDB
 // Removed the deprecated options
-mongoose.connect("process.env.MONGODB_URI")
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Failed to connect to MongoDB', err));
 
@@ -191,10 +190,9 @@ app.post('/signup', async (req, res) => {
         id: user.id
       }
     };
-
     const jwtSecret = process.env.JWT_SECRET;
 
-    const token = jwt.sign(data,  jwtSecre);
+    const token = jwt.sign(data,jwtSecret);
     res.json({ success: true, token });
   } catch (error) {
     console.error('Error during user registration:', error);
@@ -205,28 +203,36 @@ app.post('/signup', async (req, res) => {
 
 
 //creating endpoint for user login
-app.post('/login',async (req,res)=>{
-  let user = await Users.findOne({email:req.body.email});
-  if(user)
-  {
-    const passCompare = req.body.password=== user.password;
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  // Special admin credentials check
+  if (email === 'admin@gmail.com' && password === 'admin@123') {
+    const token = jwt.sign({ email }, 'secret_ecom', { expiresIn: '1h' });
+    return res.json({ success: true, token, isAdmin: true });
+  }
+
+  // Normal user login
+  let user = await Users.findOne({ email });
+  if (user) {
+    const passCompare = password === user.password;
     if (passCompare) {
       const data = {
-        user:{
-          id:user.id
-        }
-      }
-      const token = jwt.sign(data,'secret_ecom');
-      res.json({success:true,token})
+        user: {
+          id: user.id,
+        },
+      };
+      const token = jwt.sign(data, 'secret_ecom', { expiresIn: '1h' });
+      return res.json({ success: true, token, isAdmin: false });
+    } else {
+      return res.json({ success: false, errors: 'Wrong Password' });
     }
-    else{
-      res.json({success:false,errors:"Wrong Passoword"});
-    }
-  }
-  else{
-    res.json({success:false,errors:"Wrong email"})
+  } else {
+    return res.json({ success: false, errors: 'Wrong email' });
   }
 });
+
+
 
 //creating endpoint for new collection data
 app.get('/newcollections',async (req,res)=>{
